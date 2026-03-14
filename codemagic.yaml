@@ -1,0 +1,25 @@
+workflows:
+  android-debug:
+    name: NetGuard APK Debug
+    max_build_duration: 60
+    environment:
+      flutter: 3.41.4
+      java: 17
+    scripts:
+      - name: Get packages
+        script: flutter pub get
+      - name: Build APK
+        script: flutter build apk --debug --split-per-abi
+    artifacts:
+      - build/app/outputs/apk/debug/*.apk
+```
+
+Commit → **Start new build** → select `android-debug` workflow.
+
+---
+
+After build finishes, in **Artifacts** you'll see 3 APK files:
+```
+app-arm64-v8a-debug.apk     ← use this one (most modern phones)
+app-armeabi-v7a-debug.apk   ← older phones
+app-x86_64-debug.apk        ← emulators
