@@ -65,15 +65,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final result = await api.generateReport();
       if (mounted) {
         if (result['is_pdf'] == true) {
-          // Save PDF to downloads folder
           final bytes = result['pdf_bytes'] as List<int>;
-          final dir = await getExternalStorageDirectory();
-          final path = '${dir!.path}/netguard_report.pdf';
+          // Save to Downloads folder - visible in file manager
+          final path = '/storage/emulated/0/Download/netguard_report.pdf';
           final file = File(path);
           await file.writeAsBytes(bytes);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('PDF saved to: $path'),
+              content: Text('PDF saved to Downloads folder!'),
               backgroundColor: AppColors.green,
               duration: const Duration(seconds: 4)));
         } else {
