@@ -6,13 +6,13 @@ plugins {
 
 android {
     ndkVersion = "26.1.10909125"
-    namespace "com.netguard.app"
-    compileSdk 36
-    ndkVersion "25.1.8937393"
+    namespace = "com.netguard.app"
+    compileSdk = 36
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+        coreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
@@ -20,20 +20,24 @@ android {
     }
 
     defaultConfig {
-        applicationId "com.netguard.app"
-        minSdk 21
-        targetSdk 36
-        versionCode 1
-        versionName "1.0"
+        applicationId = "com.netguard.app"
+        minSdk = 21
+        targetSdk = 36
+        versionCode = 1
+        versionName = "1.0"
     }
 
     buildTypes {
         release {
-            signingConfig signingConfigs.debug
+            signingConfig = signingConfigs.debug
         }
     }
 }
 
 flutter {
-    source "../.."
+    source = "../.."
+}
+
+dependencies {
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
 }
