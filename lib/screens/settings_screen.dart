@@ -1,6 +1,8 @@
 // lib/screens/settings_screen.dart
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:path_provider/path_provider.dart';
 import '../theme/app_theme.dart';
 import '../providers/app_state.dart';
 import '../services/api_service.dart';
@@ -63,10 +65,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final result = await api.generateReport();
       if (mounted) {
         if (result['is_pdf'] == true) {
+          // Save PDF to downloads folder
+          final bytes = result['pdf_bytes'] as List<int>;
+          final dir = await getExternalStorageDirectory();
+          final path = '${dir!.path}/netguard_report.pdf';
+          final file = File(path);
+          await file.writeAsBytes(bytes);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Report generated successfully!'),
-              backgroundColor: AppColors.green));
+            SnackBar(
+              content: Text('PDF saved to: $path'),
+              backgroundColor: AppColors.green,
+              duration: const Duration(seconds: 4)));
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
