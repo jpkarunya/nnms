@@ -30,6 +30,9 @@ dependencies:
   # Utils
   intl: ^0.20.2
 
+  # File picking
+  file_picker: ^6.1.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
