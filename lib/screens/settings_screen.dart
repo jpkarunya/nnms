@@ -381,9 +381,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       child: const Text('CANCEL',
                           style: TextStyle(color: AppColors.textMuted))),
                     TextButton(
-                      onPressed: () {
+                      onPressed: () async {
                         Navigator.pop(context);
-                        context.read<AppState>().logout();
+                        // JWT logout — clears token from storage
+                        final api = context.read<ApiService>();
+                        try { await api.logoutFromServer(); } catch (_) {}
+                        await context.read<AppState>().logout();
                       },
                       child: const Text('LOGOUT',
                           style: TextStyle(color: AppColors.red))),
