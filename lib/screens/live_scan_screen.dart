@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../providers/app_state.dart';
 import '../services/api_service.dart';
+import '../services/notification_service.dart';
 
 class LiveScanScreen extends StatefulWidget {
   const LiveScanScreen({super.key});
