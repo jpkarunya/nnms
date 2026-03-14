@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'theme/app_theme.dart';
 import 'providers/app_state.dart';
 import 'services/api_service.dart';
+import 'services/notification_service.dart';
 import 'screens/login_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/live_scan_screen.dart';
@@ -12,8 +13,12 @@ import 'screens/threat_logs_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/pcap_screen.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize notifications
+  await NotificationService().init();
+
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
