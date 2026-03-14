@@ -49,13 +49,21 @@ class _LiveScanScreenState extends State<LiveScanScreen> {
   }
 
   Future<void> _stopScan() async {
-    _pollTimer?.cancel();
-    try { await context.read<ApiService>().stopScan(); } catch (_) {}
-    if (mounted) {
-      setState(() => _scanning = false);
-      context.read<AppState>().setScanRunning(false);
+  _pollTimer?.cancel();
+  try { await context.read<ApiService>().stopScan(); } catch (_) {}
+  if (mounted) {
+    setState(() => _scanning = false);
+    context.read<AppState>().setScanRunning(false);
+
+    // Notify scan complete
+    if (_packetsTotal > 0) {
+      NotificationService().showScanComplete(
+        totalPackets: _packetsTotal,
+        threats: _threatsFound,
+      );
     }
   }
+}
 
   Future<void> _poll() async {
     if (!_scanning) return;
