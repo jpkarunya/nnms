@@ -1,4 +1,5 @@
 // lib/services/notification_service.dart
+import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class NotificationService {
@@ -45,13 +46,11 @@ class NotificationService {
       enableVibration: true,
     );
 
-    final details = NotificationDetails(android: androidDetails);
-
     await _plugin.show(
       DateTime.now().millisecondsSinceEpoch ~/ 1000,
       title,
       body,
-      details,
+      NotificationDetails(android: androidDetails),
     );
   }
 
@@ -100,10 +99,4 @@ class NotificationService {
       const NotificationDetails(android: androidDetails),
     );
   }
-}
-
-// Color import needed
-class Color {
-  final int value;
-  const Color(this.value);
 }
