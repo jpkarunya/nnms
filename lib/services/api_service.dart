@@ -4,13 +4,8 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart' show kIsWeb;
 
-/// Returns the correct base URL for the current platform.
-/// - Android emulator: 10.0.2.2 maps to your PC's localhost
-/// - Android physical device: use your PC's WiFi IP (e.g. 192.168.1.5)
-/// - iOS simulator / Web / Desktop: localhost
 String getDefaultBaseUrl() {
   if (!kIsWeb && Platform.isAndroid) {
-    // Change this to your PC's WiFi IP when using a real Android device
     return 'http://10.0.2.2:8000';
   }
   return 'http://localhost:8000';
@@ -19,7 +14,7 @@ String getDefaultBaseUrl() {
 class ApiService {
   String baseUrl;
   final _client = http.Client();
-  static const _timeout = Duration(seconds: 10);
+  static const _timeout = Duration(seconds: 30);
 
   ApiService({String? baseUrl}) : baseUrl = baseUrl ?? getDefaultBaseUrl();
 
@@ -56,6 +51,9 @@ class ApiService {
   }
 
   Map<String, dynamic> _parse(http.Response r) {
+    if (r.headers['content-type']?.contains('application/pdf') == true) {
+      return {'pdf_bytes': r.bodyBytes, 'is_pdf': true};
+    }
     final body = jsonDecode(r.body) as Map<String, dynamic>;
     if (r.statusCode >= 400) {
       throw ApiException(r.statusCode,
@@ -80,8 +78,7 @@ class ApiService {
       _post('/scan/stop', {});
 
   Future<Map<String, dynamic>> getScanStatus({int maxPackets = 20}) =>
-      _get('/scan/status',
-          q: {'max_packets': maxPackets.toString()});
+      _get('/scan/status', q: {'max_packets': maxPackets.toString()});
 
   Future<Map<String, dynamic>> detectThreats(
           List<Map<String, dynamic>> packets) =>
@@ -104,6 +101,51 @@ class ApiService {
 
   Future<Map<String, dynamic>> getDashboardData({int hours = 24}) =>
       _get('/dashboard-data', q: {'hours': hours.toString()});
+
+  // ── NEW: SHAP Explain ──────────────────────────────────
+  Future<Map<String, dynamic>> explainThreat({
+    required Map<String, dynamic> packet,
+    required String threatLabel,
+    required double threatScore,
+  }) =>
+      _post('/explain', {
+        'packet': packet,
+        'threat_label': threatLabel,
+        'threat_score': threatScore,
+      });
+
+  Future<Map<String, dynamic>> getExplainSummary() =>
+      _get('/explain/summary');
+
+  // ── NEW: PCAP Upload ───────────────────────────────────
+  Future<Map<String, dynamic>> uploadPcap(String filePath) async {
+    final uri = Uri.parse('$baseUrl/pcap/upload');
+    try {
+      final request = http.MultipartRequest('POST', uri)
+        ..headers['ngrok-skip-browser-warning'] = 'true'
+        ..headers['User-Agent'] = 'NetGuardApp/1.0'
+        ..files.add(await http.MultipartFile.fromPath('file', filePath));
+      final streamed = await request.send().timeout(_timeout);
+      final response = await http.Response.fromStream(streamed);
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } on SocketException {
+      throw ApiException(0, 'Cannot connect to server at $baseUrl');
+    }
+  }
+
+  // ── NEW: Report Generate ───────────────────────────────
+  Future<Map<String, dynamic>> generateReport() async {
+    final uri = Uri.parse('$baseUrl/report/generate');
+    try {
+      final r = await _client.get(uri, headers: _h).timeout(_timeout);
+      if (r.headers['content-type']?.contains('application/pdf') == true) {
+        return {'pdf_bytes': r.bodyBytes, 'is_pdf': true};
+      }
+      return jsonDecode(r.body) as Map<String, dynamic>;
+    } on SocketException {
+      throw ApiException(0, 'Cannot connect to server at $baseUrl');
+    }
+  }
 }
 
 class ApiException implements Exception {
