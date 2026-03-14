@@ -31,7 +31,7 @@ dependencies:
   intl: ^0.20.2
 
   # File picking
-  file_picker: ^6.1.1
+  file_picker: ^8.1.2
 
 dev_dependencies:
   flutter_test:
