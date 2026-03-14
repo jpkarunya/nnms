@@ -78,12 +78,16 @@ class _ShapScreenState extends State<ShapScreen> {
   Widget _buildExplanationCard() {
     final label = _data['threat_label'] as String? ?? 'Normal';
     final score = (_data['threat_score'] as num?)?.toDouble() ?? 0.0;
+    final attackType = _data['attack_type'] as String? ?? '';
     final explanation = _data['explanation'] as String? ?? '';
+    final network = _data['network_context'] as String? ?? '';
+    final impact = _data['impact'] as String? ?? '';
+    final action = _data['recommended_action'] as String? ?? '';
     final color = AppColors.scoreToColor(score);
+
     return CyberCard(
       borderColor: color.withOpacity(0.4),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           const Text('AI DECISION', style: TextStyle(
               color: AppColors.textMuted, fontSize: 10, letterSpacing: 2)),
@@ -93,23 +97,37 @@ class _ShapScreenState extends State<ShapScreen> {
           Text('${score.toStringAsFixed(1)}/100',
               style: TextStyle(color: color, fontWeight: FontWeight.bold)),
         ]),
-        const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: color.withOpacity(0.2)),
+
+        if (attackType.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: color.withOpacity(0.3))),
+            child: Row(children: [
+              Icon(Icons.security, color: color, size: 14),
+              const SizedBox(width: 8),
+              Expanded(child: Text(attackType,
+                  style: TextStyle(color: color, fontSize: 12,
+                      fontWeight: FontWeight.bold))),
+            ]),
           ),
-          child: Row(crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-            Icon(Icons.psychology_outlined, color: color, size: 18),
-            const SizedBox(width: 10),
-            Expanded(child: Text(explanation,
-                style: const TextStyle(
-                    color: AppColors.textPrimary, fontSize: 12))),
-          ]),
-        ),
+        ],
+
+        const SizedBox(height: 10),
+        _InfoBlock(icon: Icons.psychology_outlined,
+            color: AppColors.cyan, title: 'WHAT IS HAPPENING', text: explanation),
+        const SizedBox(height: 8),
+        _InfoBlock(icon: Icons.wifi_outlined,
+            color: AppColors.yellow, title: 'NETWORK CONTEXT', text: network),
+        const SizedBox(height: 8),
+        _InfoBlock(icon: Icons.warning_amber_outlined,
+            color: AppColors.red, title: 'POTENTIAL IMPACT', text: impact),
+        const SizedBox(height: 8),
+        _InfoBlock(icon: Icons.shield_outlined,
+            color: AppColors.green, title: 'RECOMMENDED ACTION', text: action),
       ]),
     );
   }
@@ -208,6 +226,37 @@ class _ShapScreenState extends State<ShapScreen> {
             ]),
           );
         }),
+      ]),
+    );
+  }
+}
+
+// Helper widget for detailed information blocks
+class _InfoBlock extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String title, text;
+  const _InfoBlock({required this.icon, required this.color,
+      required this.title, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.04),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.2))),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Icon(icon, color: color, size: 13),
+          const SizedBox(width: 6),
+          Text(title, style: TextStyle(color: color, fontSize: 9,
+              letterSpacing: 1.5, fontWeight: FontWeight.bold)),
+        ]),
+        const SizedBox(height: 6),
+        Text(text, style: const TextStyle(color: AppColors.textPrimary,
+            fontSize: 11, height: 1.5)),
       ]),
     );
   }
