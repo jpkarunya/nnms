@@ -69,9 +69,35 @@ class _LoginScreenState extends State<LoginScreen>
       return;
     }
     setState(() { _loading = true; _error = null; });
-    await Future.delayed(const Duration(milliseconds: 500));
-    if (mounted) {
-      context.read<AppState>().login();
+
+    try {
+      final api = context.read<ApiService>();
+      final result = await api.loginWithCredentials(
+        username: _userCtrl.text.trim(),
+        password: _passCtrl.text.trim(),
+      );
+
+      if (result['success'] == true) {
+        // JWT login success
+        await context.read<AppState>().loginWithJwt(
+          token: result['token'] as String,
+          username: result['username'] as String,
+          role: result['role'] as String? ?? 'user',
+        );
+      } else {
+        setState(() {
+          _error = result['message'] as String? ?? 'Login failed';
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      // Backend offline — fallback to demo mode
+      if (mounted) {
+        setState(() {
+          _error = 'Backend offline — use Demo Mode below';
+          _loading = false;
+        });
+      }
     }
   }
 
