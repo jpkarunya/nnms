@@ -6,7 +6,14 @@ import '../services/api_service.dart';
 class AppState extends ChangeNotifier {
   // Auth
   bool _authenticated = false;
+  String? _jwtToken;
+  String? _username;
+  String? _role;
+
   bool get isAuthenticated => _authenticated;
+  String? get jwtToken => _jwtToken;
+  String? get username => _username;
+  String? get role => _role;
 
   // Navigation
   int _tabIndex = 0;
@@ -39,6 +46,17 @@ class AppState extends ChangeNotifier {
     _serverUrl = prefs.getString('serverUrl') ?? getDefaultBaseUrl();
     _alertThreshold = prefs.getDouble('alertThreshold') ?? 70.0;
     _alertsEnabled = prefs.getBool('alertsEnabled') ?? true;
+
+    // Auto-login if valid token exists
+    final savedToken = prefs.getString('jwt_token');
+    final savedUsername = prefs.getString('jwt_username');
+    final savedRole = prefs.getString('jwt_role');
+    if (savedToken != null && savedUsername != null) {
+      _jwtToken = savedToken;
+      _username = savedUsername;
+      _role = savedRole;
+      _authenticated = true;
+    }
     notifyListeners();
   }
 
@@ -57,8 +75,49 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void login() { _authenticated = true; notifyListeners(); }
-  void logout() { _authenticated = false; _tabIndex = 0; notifyListeners(); }
+  // Simple login (demo mode - no JWT)
+  void login() {
+    _authenticated = true;
+    _username = 'admin';
+    _role = 'admin';
+    notifyListeners();
+  }
+
+  // JWT login - called after successful API authentication
+  Future<void> loginWithJwt({
+    required String token,
+    required String username,
+    required String role,
+  }) async {
+    _jwtToken = token;
+    _username = username;
+    _role = role;
+    _authenticated = true;
+
+    // Save to persistent storage
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('jwt_token', token);
+    await prefs.setString('jwt_username', username);
+    await prefs.setString('jwt_role', role);
+
+    notifyListeners();
+  }
+
+  // Logout - clears JWT token
+  Future<void> logout() async {
+    _authenticated = false;
+    _jwtToken = null;
+    _username = null;
+    _role = null;
+    _tabIndex = 0;
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('jwt_token');
+    await prefs.remove('jwt_username');
+    await prefs.remove('jwt_role');
+
+    notifyListeners();
+  }
 
   void setTab(int i) { _tabIndex = i; notifyListeners(); }
   void setScanRunning(bool v) { _scanRunning = v; notifyListeners(); }
@@ -76,7 +135,7 @@ class AppState extends ChangeNotifier {
     final now = DateTime.now();
     if (_alerts.isNotEmpty) {
       final last = _alerts.last['ts'] as DateTime;
-      if (now.difference(last).inSeconds < 30) return; // debounce
+      if (now.difference(last).inSeconds < 30) return;
     }
     _alerts.add({'score': score, 'severity': severity, 'ts': now});
     if (_alerts.length > 5) _alerts.removeAt(0);
@@ -86,5 +145,6 @@ class AppState extends ChangeNotifier {
   void dismissAlert(int i) {
     if (i < _alerts.length) { _alerts.removeAt(i); notifyListeners(); }
   }
+
   void clearAlerts() { _alerts.clear(); notifyListeners(); }
 }
