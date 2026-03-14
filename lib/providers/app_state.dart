@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
+import '../services/notification_service.dart';
 
 class AppState extends ChangeNotifier {
   // Auth
@@ -139,6 +140,14 @@ class AppState extends ChangeNotifier {
     }
     _alerts.add({'score': score, 'severity': severity, 'ts': now});
     if (_alerts.length > 5) _alerts.removeAt(0);
+
+    // Send push notification
+    NotificationService().showThreatAlert(
+      title: '⚡ THREAT ALERT — $severity',
+      body: 'Threat score: ${score.toStringAsFixed(1)}/100 detected on your network',
+      score: score,
+    );
+
     notifyListeners();
   }
 
