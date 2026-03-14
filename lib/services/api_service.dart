@@ -102,7 +102,7 @@ class ApiService {
   Future<Map<String, dynamic>> getDashboardData({int hours = 24}) =>
       _get('/dashboard-data', q: {'hours': hours.toString()});
 
-  // ── NEW: SHAP Explain ──────────────────────────────────
+  // ── SHAP Explain ───────────────────────────────────────
   Future<Map<String, dynamic>> explainThreat({
     required Map<String, dynamic> packet,
     required String threatLabel,
@@ -117,7 +117,7 @@ class ApiService {
   Future<Map<String, dynamic>> getExplainSummary() =>
       _get('/explain/summary');
 
-  // ── NEW: PCAP Upload ───────────────────────────────────
+  // ── PCAP Upload ────────────────────────────────────────
   Future<Map<String, dynamic>> uploadPcap(String filePath) async {
     final uri = Uri.parse('$baseUrl/pcap/upload');
     try {
@@ -133,7 +133,7 @@ class ApiService {
     }
   }
 
-  // ── NEW: Report Generate ───────────────────────────────
+  // ── Report Generate ────────────────────────────────────
   Future<Map<String, dynamic>> generateReport() async {
     final uri = Uri.parse('$baseUrl/report/generate');
     try {
@@ -146,6 +146,22 @@ class ApiService {
       throw ApiException(0, 'Cannot connect to server at $baseUrl');
     }
   }
+
+  // ── JWT Auth ───────────────────────────────────────────
+  Future<Map<String, dynamic>> loginWithCredentials({
+    required String username,
+    required String password,
+  }) =>
+      _post('/auth/login', {
+        'username': username,
+        'password': password,
+      });
+
+  Future<Map<String, dynamic>> verifyToken(String token) =>
+      _post('/auth/verify', {'token': token});
+
+  Future<Map<String, dynamic>> logoutFromServer() =>
+      _post('/auth/logout', {});
 }
 
 class ApiException implements Exception {
