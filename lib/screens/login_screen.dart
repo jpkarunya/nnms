@@ -1,7 +1,5 @@
 // lib/screens/login_screen.dart
 import 'dart:async';
-import 'dart:math';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
@@ -28,20 +26,23 @@ class _LoginScreenState extends State<LoginScreen>
   Timer? _healthTimer;
 
   late final AnimationController _fadeCtrl =
-      AnimationController(vsync: this, duration: const Duration(milliseconds: 1000))
+      AnimationController(vsync: this,
+          duration: const Duration(milliseconds: 1000))
         ..forward();
   late final Animation<double> _fadeAnim =
       CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
 
   late final AnimationController _glowCtrl =
-      AnimationController(vsync: this, duration: const Duration(milliseconds: 2000))
+      AnimationController(vsync: this,
+          duration: const Duration(milliseconds: 2000))
         ..repeat(reverse: true);
 
   @override
   void initState() {
     super.initState();
     _checkHealth();
-    _healthTimer = Timer.periodic(const Duration(seconds: 5), (_) => _checkHealth());
+    _healthTimer =
+        Timer.periodic(const Duration(seconds: 5), (_) => _checkHealth());
   }
 
   @override
@@ -69,16 +70,13 @@ class _LoginScreenState extends State<LoginScreen>
       return;
     }
     setState(() { _loading = true; _error = null; });
-
     try {
       final api = context.read<ApiService>();
       final result = await api.loginWithCredentials(
         username: _userCtrl.text.trim(),
         password: _passCtrl.text.trim(),
       );
-
       if (result['success'] == true) {
-        // JWT login success
         await context.read<AppState>().loginWithJwt(
           token: result['token'] as String,
           username: result['username'] as String,
@@ -91,7 +89,6 @@ class _LoginScreenState extends State<LoginScreen>
         });
       }
     } catch (e) {
-      // Backend offline — fallback to demo mode
       if (mounted) {
         setState(() {
           _error = 'Backend offline — use Demo Mode below';
@@ -101,14 +98,57 @@ class _LoginScreenState extends State<LoginScreen>
     }
   }
 
+  void _showUrlDialog() {
+    final ctrl = TextEditingController(
+        text: context.read<AppState>().serverUrl);
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.bg1,
+        title: const Text('Change Server URL',
+            style: TextStyle(color: AppColors.cyan, fontSize: 14)),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          style: const TextStyle(color: AppColors.textPrimary, fontSize: 12),
+          decoration: const InputDecoration(
+            labelText: 'ngrok URL',
+            hintText: 'https://xxx.ngrok-free.dev',
+            prefixIcon: Icon(Icons.link, size: 16)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('CANCEL',
+                style: TextStyle(color: AppColors.textMuted))),
+          TextButton(
+            onPressed: () async {
+              final url = ctrl.text.trim();
+              if (url.isEmpty) return;
+              await context.read<AppState>().saveSettings(
+                url: url,
+                threshold: context.read<AppState>().alertThreshold,
+                alertsOn: context.read<AppState>().alertsEnabled,
+              );
+              if (mounted) {
+                Navigator.pop(context);
+                _checkHealth();
+              }
+            },
+            child: const Text('SAVE & TEST',
+                style: TextStyle(color: AppColors.cyan,
+                    fontWeight: FontWeight.bold))),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bg0,
       body: Stack(children: [
-        // Animated grid background
         const _GridBackground(),
-        // Centered card
         Center(
           child: FadeTransition(
             opacity: _fadeAnim,
@@ -126,10 +166,9 @@ class _LoginScreenState extends State<LoginScreen>
                       border: Border.all(color: AppColors.border),
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.cyan
-                              .withValues(alpha: 0.05 + _glowCtrl.value * 0.06),
-                          blurRadius: 60, spreadRadius: 10,
-                        )
+                          color: AppColors.cyan.withValues(
+                              alpha: 0.05 + _glowCtrl.value * 0.06),
+                          blurRadius: 60, spreadRadius: 10)
                       ],
                     ),
                     child: child!,
@@ -146,7 +185,7 @@ class _LoginScreenState extends State<LoginScreen>
 
   Widget _buildForm() {
     return Column(mainAxisSize: MainAxisSize.min, children: [
-      // Shield logo with pulsing border
+      // Shield logo
       AnimatedBuilder(
         animation: _glowCtrl,
         builder: (_, __) => Container(
@@ -155,13 +194,16 @@ class _LoginScreenState extends State<LoginScreen>
             shape: BoxShape.circle,
             color: AppColors.cyan.withValues(alpha: 0.08),
             border: Border.all(
-              color: AppColors.cyan.withValues(alpha: 0.3 + _glowCtrl.value * 0.5),
+              color: AppColors.cyan.withValues(
+                  alpha: 0.3 + _glowCtrl.value * 0.5),
               width: 1.5),
             boxShadow: [BoxShadow(
-              color: AppColors.cyan.withValues(alpha: _glowCtrl.value * 0.35),
+              color: AppColors.cyan.withValues(
+                  alpha: _glowCtrl.value * 0.35),
               blurRadius: 24)],
           ),
-          child: const Icon(Icons.shield_outlined, color: AppColors.cyan, size: 32),
+          child: const Icon(Icons.shield_outlined,
+              color: AppColors.cyan, size: 32),
         ),
       ),
       const SizedBox(height: 14),
@@ -172,47 +214,62 @@ class _LoginScreenState extends State<LoginScreen>
       const Text('AI THREAT DETECTION SYSTEM',
           style: TextStyle(color: AppColors.textMuted, fontSize: 9,
               letterSpacing: 3)),
-      const SizedBox(height: 24),
+      const SizedBox(height: 20),
 
-      // Server status badge
-      AnimatedContainer(
-        duration: const Duration(milliseconds: 400),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: (_serverOnline ? AppColors.green : AppColors.red)
-              .withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
+      // Server status badge — tappable to change URL
+      GestureDetector(
+        onTap: _showUrlDialog,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 400),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
             color: (_serverOnline ? AppColors.green : AppColors.red)
-                .withValues(alpha: 0.35)),
-        ),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          _checkingServer
-              ? SizedBox(width: 8, height: 8,
-                  child: CircularProgressIndicator(strokeWidth: 1.5,
-                    color: AppColors.textMuted))
-              : LivePulseDot(
-                  active: _serverOnline,
-                  color: _serverOnline ? AppColors.green : AppColors.red),
-          const SizedBox(width: 8),
-          Text(
-            _checkingServer
-                ? 'CHECKING SERVER...'
-                : 'BACKEND ${_serverOnline ? "ONLINE" : "OFFLINE"}',
-            style: TextStyle(
-              color: _serverOnline ? AppColors.green : AppColors.red,
-              fontSize: 11, letterSpacing: 1.5, fontWeight: FontWeight.bold,
-            ),
+                .withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: (_serverOnline ? AppColors.green : AppColors.red)
+                  .withValues(alpha: 0.35)),
           ),
-        ]),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            _checkingServer
+                ? const SizedBox(width: 8, height: 8,
+                    child: CircularProgressIndicator(strokeWidth: 1.5,
+                        color: AppColors.textMuted))
+                : LivePulseDot(
+                    active: _serverOnline,
+                    color: _serverOnline ? AppColors.green : AppColors.red),
+            const SizedBox(width: 8),
+            Text(
+              _checkingServer
+                  ? 'CHECKING SERVER...'
+                  : 'BACKEND ${_serverOnline ? "ONLINE" : "OFFLINE"}',
+              style: TextStyle(
+                color: _serverOnline ? AppColors.green : AppColors.red,
+                fontSize: 11, letterSpacing: 1.5,
+                fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(width: 6),
+            Icon(Icons.edit_outlined,
+                size: 11,
+                color: _serverOnline ? AppColors.green : AppColors.red),
+          ]),
+        ),
       ),
-      const SizedBox(height: 28),
+
+      // Change URL button
+      TextButton.icon(
+        onPressed: _showUrlDialog,
+        icon: const Icon(Icons.link, size: 13, color: AppColors.cyan),
+        label: const Text('Change Server URL',
+            style: TextStyle(color: AppColors.cyan, fontSize: 11)),
+      ),
+      const SizedBox(height: 16),
 
       // Username
       TextField(
         controller: _userCtrl,
         focusNode: _userFocus,
-        autofocus: false,   // prevents DOM assertion on Flutter web
+        autofocus: false,
         style: const TextStyle(color: AppColors.textPrimary, fontSize: 13),
         textInputAction: TextInputAction.next,
         onSubmitted: (_) => _passFocus.requestFocus(),
@@ -236,7 +293,8 @@ class _LoginScreenState extends State<LoginScreen>
           prefixIcon: const Icon(Icons.lock_outline, size: 18),
           suffixIcon: IconButton(
             icon: Icon(
-              _obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+              _obscure ? Icons.visibility_outlined
+                  : Icons.visibility_off_outlined,
               size: 18, color: AppColors.textMuted),
             onPressed: () => setState(() => _obscure = !_obscure),
           ),
@@ -256,7 +314,8 @@ class _LoginScreenState extends State<LoginScreen>
             const Icon(Icons.error_outline, color: AppColors.red, size: 15),
             const SizedBox(width: 8),
             Expanded(child: Text(_error!,
-                style: const TextStyle(color: AppColors.red, fontSize: 12))),
+                style: const TextStyle(
+                    color: AppColors.red, fontSize: 12))),
           ]),
         ),
       ],
@@ -274,25 +333,24 @@ class _LoginScreenState extends State<LoginScreen>
               : const Text('AUTHENTICATE'),
         ),
       ),
-      const SizedBox(height: 16),
+      const SizedBox(height: 12),
 
-      // Hint: offline mode
-      if (!_serverOnline)
-        TextButton(
-          onPressed: () => context.read<AppState>().login(),
-          child: const Text('Continue in Demo Mode (no backend)',
-              style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
-        ),
+      // Demo mode — ALWAYS visible
+      TextButton(
+        onPressed: () => context.read<AppState>().login(),
+        child: const Text('Continue in Demo Mode',
+            style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
+      ),
 
-      const SizedBox(height: 8),
-      const Text('v1.0.0 — AI Cybersecurity Project',
+      const SizedBox(height: 4),
+      const Text('v2.0.0 — AI Cybersecurity Project',
           style: TextStyle(color: AppColors.textMuted, fontSize: 10),
           textAlign: TextAlign.center),
     ]);
   }
 }
 
-// Animated grid background painter
+// Animated grid background
 class _GridBackground extends StatefulWidget {
   const _GridBackground();
   @override
@@ -302,7 +360,8 @@ class _GridBackground extends StatefulWidget {
 class _GridBackgroundState extends State<_GridBackground>
     with SingleTickerProviderStateMixin {
   late final AnimationController _c =
-      AnimationController(vsync: this, duration: const Duration(seconds: 8))
+      AnimationController(vsync: this,
+          duration: const Duration(seconds: 8))
         ..repeat();
   @override
   void dispose() { _c.dispose(); super.dispose(); }
@@ -335,7 +394,6 @@ class _GridPainter extends CustomPainter {
     for (double y = 0; y < size.height; y += step) {
       canvas.drawLine(Offset(0, y), Offset(size.width, y), p);
     }
-    // Animated scan line
     final scanY = (size.height * t) % size.height;
     final scanPaint = Paint()
       ..shader = LinearGradient(colors: [
@@ -343,10 +401,10 @@ class _GridPainter extends CustomPainter {
         AppColors.cyan.withValues(alpha: 0.12),
         Colors.transparent,
       ]).createShader(Rect.fromLTWH(0, scanY - 30, size.width, 60));
-    canvas.drawRect(Rect.fromLTWH(0, scanY - 30, size.width, 60), scanPaint);
-
-    // Random dim dots at grid intersections
-    final dotP = Paint()..color = AppColors.cyan.withValues(alpha: 0.08);
+    canvas.drawRect(
+        Rect.fromLTWH(0, scanY - 30, size.width, 60), scanPaint);
+    final dotP = Paint()
+        ..color = AppColors.cyan.withValues(alpha: 0.08);
     for (double x = 0; x < size.width; x += step) {
       for (double y = 0; y < size.height; y += step) {
         if ((x + y + t * 100).round() % 7 == 0) {
