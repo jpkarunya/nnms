@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../providers/app_state.dart';
 import '../services/api_service.dart';
+import 'shap_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -18,6 +19,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _saving = false;
   bool _testing = false;
   bool? _testResult;
+  bool _generatingReport = false;
+  bool _loadingShap = false;
 
   @override
   void initState() {
@@ -53,6 +56,45 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _generateReport() async {
+    setState(() => _generatingReport = true);
+    try {
+      final api = context.read<ApiService>();
+      final result = await api.generateReport();
+      if (mounted) {
+        if (result['is_pdf'] == true) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Report generated successfully!'),
+              backgroundColor: AppColors.green));
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result['error']?.toString() ?? 'Report failed'),
+              backgroundColor: AppColors.red));
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'),
+              backgroundColor: AppColors.red));
+      }
+    } finally {
+      if (mounted) setState(() => _generatingReport = false);
+    }
+  }
+
+  Future<void> _openShap() async {
+    setState(() => _loadingShap = true);
+    try {
+      Navigator.push(context,
+        MaterialPageRoute(builder: (_) => const ShapScreen()));
+    } finally {
+      if (mounted) setState(() => _loadingShap = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -62,7 +104,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         padding: const EdgeInsets.all(16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
 
-          // ── Connection ───────────────────────────────────────────────
+          // ── Connection ─────────────────────────────────────────────
           const SectionHeader(title: 'CONNECTION',
               subtitle: 'FastAPI backend server URL'),
           const SizedBox(height: 12),
@@ -70,7 +112,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Column(children: [
               TextField(
                 controller: _urlCtrl,
-                style: const TextStyle(color: AppColors.textPrimary, fontSize: 13),
+                style: const TextStyle(
+                    color: AppColors.textPrimary, fontSize: 13),
                 keyboardType: TextInputType.url,
                 decoration: const InputDecoration(
                   labelText: 'BACKEND URL',
@@ -79,24 +122,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
               const SizedBox(height: 8),
-              // Android hint
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: AppColors.cyan.withValues(alpha: 0.06),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppColors.cyan.withValues(alpha: 0.2))),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: const [
+                  border: Border.all(
+                      color: AppColors.cyan.withValues(alpha: 0.2))),
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
                   Text('📱 Android URL Guide',
-                      style: TextStyle(color: AppColors.cyan, fontSize: 11,
-                          fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                      style: TextStyle(color: AppColors.cyan,
+                          fontSize: 11, fontWeight: FontWeight.bold,
+                          letterSpacing: 0.5)),
                   SizedBox(height: 4),
                   Text('• Emulator → http://10.0.2.2:8000',
-                      style: TextStyle(color: AppColors.textSecondary, fontSize: 11)),
+                      style: TextStyle(color: AppColors.textSecondary,
+                          fontSize: 11)),
                   Text('• Real device (same WiFi) → http://192.168.x.x:8000',
-                      style: TextStyle(color: AppColors.textSecondary, fontSize: 11)),
+                      style: TextStyle(color: AppColors.textSecondary,
+                          fontSize: 11)),
                   Text('• Get your PC IP: run  ipconfig (Win) or  ifconfig (Mac/Linux)',
-                      style: TextStyle(color: AppColors.textMuted, fontSize: 10)),
+                      style: TextStyle(color: AppColors.textMuted,
+                          fontSize: 10)),
                 ]),
               ),
               const SizedBox(height: 10),
@@ -106,7 +155,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     onPressed: _testing ? null : _testConnection,
                     icon: _testing
                         ? const SizedBox(width: 14, height: 14,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.cyan))
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppColors.cyan))
                         : const Icon(Icons.wifi_tethering, size: 16),
                     label: const Text('TEST CONNECTION'),
                   ),
@@ -128,12 +179,107 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(height: 20),
 
-          // ── Alert Settings ───────────────────────────────────────────
+          // ── AI Tools ───────────────────────────────────────────────
+          const SectionHeader(title: 'AI TOOLS',
+              subtitle: 'SHAP EXPLAINABILITY & REPORTS'),
+          const SizedBox(height: 12),
+          CyberCard(
+            child: Column(children: [
+              // SHAP button
+              InkWell(
+                onTap: _loadingShap ? null : _openShap,
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.cyan.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                        color: AppColors.cyan.withValues(alpha: 0.25))),
+                  child: Row(children: [
+                    Container(
+                      width: 40, height: 40,
+                      decoration: BoxDecoration(
+                        color: AppColors.cyan.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8)),
+                      child: const Icon(Icons.psychology_outlined,
+                          color: AppColors.cyan, size: 20)),
+                    const SizedBox(width: 14),
+                    const Expanded(child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                      Text('SHAP EXPLAINABILITY',
+                          style: TextStyle(color: AppColors.cyan,
+                              fontSize: 12, fontWeight: FontWeight.bold,
+                              letterSpacing: 1)),
+                      SizedBox(height: 2),
+                      Text('View feature importance & AI decisions',
+                          style: TextStyle(color: AppColors.textMuted,
+                              fontSize: 10)),
+                    ])),
+                    _loadingShap
+                        ? const SizedBox(width: 16, height: 16,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: AppColors.cyan))
+                        : const Icon(Icons.arrow_forward_ios,
+                            color: AppColors.textMuted, size: 14),
+                  ]),
+                ),
+              ),
+              const SizedBox(height: 10),
+              // Report button
+              InkWell(
+                onTap: _generatingReport ? null : _generateReport,
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.green.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                        color: AppColors.green.withValues(alpha: 0.25))),
+                  child: Row(children: [
+                    Container(
+                      width: 40, height: 40,
+                      decoration: BoxDecoration(
+                        color: AppColors.green.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8)),
+                      child: const Icon(Icons.picture_as_pdf_outlined,
+                          color: AppColors.green, size: 20)),
+                    const SizedBox(width: 14),
+                    const Expanded(child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                      Text('GENERATE REPORT',
+                          style: TextStyle(color: AppColors.green,
+                              fontSize: 12, fontWeight: FontWeight.bold,
+                              letterSpacing: 1)),
+                      SizedBox(height: 2),
+                      Text('Export threat analysis as PDF',
+                          style: TextStyle(color: AppColors.textMuted,
+                              fontSize: 10)),
+                    ])),
+                    _generatingReport
+                        ? const SizedBox(width: 16, height: 16,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppColors.green))
+                        : const Icon(Icons.download_outlined,
+                            color: AppColors.textMuted, size: 18),
+                  ]),
+                ),
+              ),
+            ]),
+          ),
+          const SizedBox(height: 20),
+
+          // ── Alert Settings ─────────────────────────────────────────
           const SectionHeader(title: 'ALERT SETTINGS',
               subtitle: 'Configure when alerts fire'),
           const SizedBox(height: 12),
           CyberCard(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
               Row(children: [
                 const Expanded(child: Text('ENABLE ALERTS',
                     style: TextStyle(color: AppColors.textSecondary,
@@ -149,32 +295,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         fontSize: 12, letterSpacing: 1)),
                 const Spacer(),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppColors.scoreToColor(_threshold).withValues(alpha: 0.1),
+                    color: AppColors.scoreToColor(_threshold)
+                        .withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                      color: AppColors.scoreToColor(_threshold).withValues(alpha: 0.35))),
+                      color: AppColors.scoreToColor(_threshold)
+                          .withValues(alpha: 0.35))),
                   child: Text(
                     _threshold.toStringAsFixed(0),
-                    style: TextStyle(color: AppColors.scoreToColor(_threshold),
+                    style: TextStyle(
+                        color: AppColors.scoreToColor(_threshold),
                         fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
               ]),
               Slider(
                 value: _threshold, min: 10, max: 100, divisions: 90,
-                onChanged: (v) => setState(() => _threshold = v),
-              ),
-              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                onChanged: (v) => setState(() => _threshold = v)),
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
                 for (final t in ['10\nLOW', '50\nMED', '75\nHIGH', '90\nCRIT'])
-                  Text(t, style: const TextStyle(color: AppColors.textMuted,
-                      fontSize: 9, letterSpacing: 1), textAlign: TextAlign.center),
+                  Text(t, style: const TextStyle(
+                      color: AppColors.textMuted, fontSize: 9,
+                      letterSpacing: 1), textAlign: TextAlign.center),
               ]),
             ]),
           ),
           const SizedBox(height: 20),
 
-          // ── Model Info ───────────────────────────────────────────────
+          // ── Model Info ─────────────────────────────────────────────
           const SectionHeader(title: 'ML MODEL INFO'),
           const SizedBox(height: 12),
           CyberCard(
@@ -182,16 +333,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
               for (final item in [
                 ['Classifier', 'XGBoost (200 trees, depth=6)'],
                 ['Anomaly Detector', 'K-Means (K=8 clusters)'],
+                ['Explainability', 'SHAP TreeExplainer'],
                 ['Prediction', 'EWMA α=0.3 + OLS trend'],
-                ['Features', '20 dimensions per packet'],
+                ['Features', '16 dimensions per packet'],
                 ['Training data', '15,000 synthetic samples'],
+                ['Dataset', 'CICIDS 2017 compatible format'],
                 ['Database', 'SQLite (dev) / PostgreSQL (prod)'],
               ]) _InfoRow(label: item[0], value: item[1]),
             ]),
           ),
           const SizedBox(height: 24),
 
-          // ── Save & Logout ────────────────────────────────────────────
+          // ── Save & Logout ──────────────────────────────────────────
           Row(children: [
             Expanded(
               child: ElevatedButton.icon(
@@ -211,7 +364,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   backgroundColor: AppColors.bg1,
                   title: const Text('Logout?',
                       style: TextStyle(color: AppColors.textPrimary)),
-                  content: const Text('You will be returned to the login screen.',
+                  content: const Text(
+                      'You will be returned to the login screen.',
                       style: TextStyle(color: AppColors.textSecondary)),
                   actions: [
                     TextButton(
@@ -252,11 +406,12 @@ class _InfoRow extends StatelessWidget {
       Padding(
         padding: const EdgeInsets.symmetric(vertical: 10),
         child: Row(children: [
-          Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+          Text(label, style: const TextStyle(
+              color: AppColors.textSecondary, fontSize: 12)),
           const Spacer(),
           Flexible(child: Text(value,
-              style: const TextStyle(color: AppColors.cyan, fontSize: 11,
-                  fontWeight: FontWeight.w600),
+              style: const TextStyle(color: AppColors.cyan,
+                  fontSize: 11, fontWeight: FontWeight.w600),
               textAlign: TextAlign.right)),
         ]),
       ),
