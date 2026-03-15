@@ -58,6 +58,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  // ── FIXED: Uses app documents directory — no permission needed
   Future<void> _generateReport() async {
     setState(() => _generatingReport = true);
     try {
@@ -66,19 +67,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (mounted) {
         if (result['is_pdf'] == true) {
           final bytes = result['pdf_bytes'] as List<int>;
-          // Save to Downloads folder - visible in file manager
-          final path = '/storage/emulated/0/Download/netguard_report.pdf';
+          final dir = await getApplicationDocumentsDirectory();
+          final path = '${dir.path}/netguard_report.pdf';
           final file = File(path);
           await file.writeAsBytes(bytes);
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('PDF saved to Downloads folder!'),
+            const SnackBar(
+              content: Text('PDF saved! Open Files app to view.'),
               backgroundColor: AppColors.green,
-              duration: const Duration(seconds: 4)));
+              duration: Duration(seconds: 4)));
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(result['error']?.toString() ?? 'Report failed'),
+              content: Text(
+                  result['error']?.toString() ?? 'Report failed'),
               backgroundColor: AppColors.red));
         }
       }
@@ -97,7 +99,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() => _loadingShap = true);
     try {
       Navigator.push(context,
-        MaterialPageRoute(builder: (_) => const ShapScreen()));
+          MaterialPageRoute(builder: (_) => const ShapScreen()));
     } finally {
       if (mounted) setState(() => _loadingShap = false);
     }
@@ -110,7 +112,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       appBar: AppBar(title: const Text('CONFIGURATION')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
 
           // ── Connection ─────────────────────────────────────────────
           const SectionHeader(title: 'CONNECTION',
@@ -164,8 +167,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     icon: _testing
                         ? const SizedBox(width: 14, height: 14,
                             child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: AppColors.cyan))
+                                strokeWidth: 2, color: AppColors.cyan))
                         : const Icon(Icons.wifi_tethering, size: 16),
                     label: const Text('TEST CONNECTION'),
                   ),
@@ -179,8 +181,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const SizedBox(width: 6),
                   Text(_testResult! ? 'ONLINE' : 'OFFLINE',
                       style: TextStyle(
-                        color: _testResult! ? AppColors.green : AppColors.red,
-                        fontSize: 11, fontWeight: FontWeight.bold)),
+                        color: _testResult!
+                            ? AppColors.green : AppColors.red,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold)),
                 ],
               ]),
             ]),
@@ -193,7 +197,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 12),
           CyberCard(
             child: Column(children: [
-              // SHAP button
               InkWell(
                 onTap: _loadingShap ? null : _openShap,
                 borderRadius: BorderRadius.circular(8),
@@ -228,14 +231,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     _loadingShap
                         ? const SizedBox(width: 16, height: 16,
                             child: CircularProgressIndicator(
-                                strokeWidth: 2, color: AppColors.cyan))
+                                strokeWidth: 2,
+                                color: AppColors.cyan))
                         : const Icon(Icons.arrow_forward_ios,
                             color: AppColors.textMuted, size: 14),
                   ]),
                 ),
               ),
               const SizedBox(height: 10),
-              // Report button
               InkWell(
                 onTap: _generatingReport ? null : _generateReport,
                 borderRadius: BorderRadius.circular(8),
@@ -316,7 +319,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     _threshold.toStringAsFixed(0),
                     style: TextStyle(
                         color: AppColors.scoreToColor(_threshold),
-                        fontSize: 16, fontWeight: FontWeight.bold)),
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold)),
                 ),
               ]),
               Slider(
@@ -324,7 +328,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onChanged: (v) => setState(() => _threshold = v)),
               Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                for (final t in ['10\nLOW', '50\nMED', '75\nHIGH', '90\nCRIT'])
+                for (final t in [
+                  '10\nLOW', '50\nMED', '75\nHIGH', '90\nCRIT'])
                   Text(t, style: const TextStyle(
                       color: AppColors.textMuted, fontSize: 9,
                       letterSpacing: 1), textAlign: TextAlign.center),
@@ -344,7 +349,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ['Explainability', 'SHAP TreeExplainer'],
                 ['Prediction', 'EWMA α=0.3 + OLS trend'],
                 ['Features', '16 dimensions per packet'],
-                ['Training data', '15,000 synthetic samples'],
+                ['Training data', 'NSL-KDD Real Dataset'],
                 ['Dataset', 'CICIDS 2017 compatible format'],
                 ['Database', 'SQLite (dev) / PostgreSQL (prod)'],
               ]) _InfoRow(label: item[0], value: item[1]),
@@ -368,28 +373,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(width: 12),
             OutlinedButton.icon(
               onPressed: () {
-                showDialog(context: context, builder: (_) => AlertDialog(
+                showDialog(context: context,
+                    builder: (_) => AlertDialog(
                   backgroundColor: AppColors.bg1,
                   title: const Text('Logout?',
-                      style: TextStyle(color: AppColors.textPrimary)),
+                      style: TextStyle(
+                          color: AppColors.textPrimary)),
                   content: const Text(
                       'You will be returned to the login screen.',
-                      style: TextStyle(color: AppColors.textSecondary)),
+                      style: TextStyle(
+                          color: AppColors.textSecondary)),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(context),
                       child: const Text('CANCEL',
-                          style: TextStyle(color: AppColors.textMuted))),
+                          style: TextStyle(
+                              color: AppColors.textMuted))),
                     TextButton(
                       onPressed: () async {
                         Navigator.pop(context);
-                        // JWT logout — clears token from storage
                         final api = context.read<ApiService>();
-                        try { await api.logoutFromServer(); } catch (_) {}
+                        try {
+                          await api.logoutFromServer();
+                        } catch (_) {}
                         await context.read<AppState>().logout();
                       },
                       child: const Text('LOGOUT',
-                          style: TextStyle(color: AppColors.red))),
+                          style: TextStyle(
+                              color: AppColors.red))),
                   ],
                 ));
               },
