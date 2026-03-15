@@ -58,7 +58,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  // ── FIXED: Uses app documents directory — no permission needed
   Future<void> _generateReport() async {
     setState(() => _generatingReport = true);
     try {
@@ -67,20 +66,47 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (mounted) {
         if (result['is_pdf'] == true) {
           final bytes = result['pdf_bytes'] as List<int>;
-          final dir = await getApplicationDocumentsDirectory();
-          final path = '${dir.path}/netguard_report.pdf';
-          final file = File(path);
-          await file.writeAsBytes(bytes);
+          String? savedPath;
+
+          // Try Downloads folder first
+          try {
+            final downloadsDir = Directory('/storage/emulated/0/Download');
+            if (await downloadsDir.exists()) {
+              final path = '/storage/emulated/0/Download/netguard_report.pdf';
+              await File(path).writeAsBytes(bytes);
+              savedPath = path;
+            }
+          } catch (_) {}
+
+          // Fallback to external storage
+          if (savedPath == null) {
+            try {
+              final extDir = await getExternalStorageDirectory();
+              if (extDir != null) {
+                final path = '${extDir.path}/netguard_report.pdf';
+                await File(path).writeAsBytes(bytes);
+                savedPath = path;
+              }
+            } catch (_) {}
+          }
+
+          // Final fallback to app documents
+          if (savedPath == null) {
+            final dir = await getApplicationDocumentsDirectory();
+            final path = '${dir.path}/netguard_report.pdf';
+            await File(path).writeAsBytes(bytes);
+            savedPath = path;
+          }
+
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('PDF saved! Open Files app to view.'),
+            SnackBar(
+              content: Text('PDF saved to: $savedPath'),
               backgroundColor: AppColors.green,
-              duration: Duration(seconds: 4)));
+              duration: const Duration(seconds: 6)));
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(
-                  result['error']?.toString() ?? 'Report failed'),
+              content: Text(result['error']?.toString() ?? 'Report failed'),
               backgroundColor: AppColors.red));
         }
       }
@@ -115,7 +141,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         child: Column(crossAxisAlignment: CrossAxisAlignment.start,
             children: [
 
-          // ── Connection ─────────────────────────────────────────────
           const SectionHeader(title: 'CONNECTION',
               subtitle: 'FastAPI backend server URL'),
           const SizedBox(height: 12),
@@ -191,7 +216,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(height: 20),
 
-          // ── AI Tools ───────────────────────────────────────────────
           const SectionHeader(title: 'AI TOOLS',
               subtitle: 'SHAP EXPLAINABILITY & REPORTS'),
           const SizedBox(height: 12),
@@ -231,8 +255,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     _loadingShap
                         ? const SizedBox(width: 16, height: 16,
                             child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: AppColors.cyan))
+                                strokeWidth: 2, color: AppColors.cyan))
                         : const Icon(Icons.arrow_forward_ios,
                             color: AppColors.textMuted, size: 14),
                   ]),
@@ -273,8 +296,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     _generatingReport
                         ? const SizedBox(width: 16, height: 16,
                             child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: AppColors.green))
+                                strokeWidth: 2, color: AppColors.green))
                         : const Icon(Icons.download_outlined,
                             color: AppColors.textMuted, size: 18),
                   ]),
@@ -284,7 +306,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(height: 20),
 
-          // ── Alert Settings ─────────────────────────────────────────
           const SectionHeader(title: 'ALERT SETTINGS',
               subtitle: 'Configure when alerts fire'),
           const SizedBox(height: 12),
@@ -338,7 +359,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(height: 20),
 
-          // ── Model Info ─────────────────────────────────────────────
           const SectionHeader(title: 'ML MODEL INFO'),
           const SizedBox(height: 12),
           CyberCard(
@@ -357,7 +377,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(height: 24),
 
-          // ── Save & Logout ──────────────────────────────────────────
           Row(children: [
             Expanded(
               child: ElevatedButton.icon(
@@ -377,30 +396,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     builder: (_) => AlertDialog(
                   backgroundColor: AppColors.bg1,
                   title: const Text('Logout?',
-                      style: TextStyle(
-                          color: AppColors.textPrimary)),
+                      style: TextStyle(color: AppColors.textPrimary)),
                   content: const Text(
                       'You will be returned to the login screen.',
-                      style: TextStyle(
-                          color: AppColors.textSecondary)),
+                      style: TextStyle(color: AppColors.textSecondary)),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(context),
                       child: const Text('CANCEL',
-                          style: TextStyle(
-                              color: AppColors.textMuted))),
+                          style: TextStyle(color: AppColors.textMuted))),
                     TextButton(
                       onPressed: () async {
                         Navigator.pop(context);
                         final api = context.read<ApiService>();
-                        try {
-                          await api.logoutFromServer();
-                        } catch (_) {}
+                        try { await api.logoutFromServer(); } catch (_) {}
                         await context.read<AppState>().logout();
                       },
                       child: const Text('LOGOUT',
-                          style: TextStyle(
-                              color: AppColors.red))),
+                          style: TextStyle(color: AppColors.red))),
                   ],
                 ));
               },
