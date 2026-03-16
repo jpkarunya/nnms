@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../theme/app_theme.dart';
 import '../providers/app_state.dart';
 import '../services/api_service.dart';
@@ -66,47 +67,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
       if (mounted) {
         if (result['is_pdf'] == true) {
           final bytes = result['pdf_bytes'] as List<int>;
-          String? savedPath;
 
-          // Try Downloads folder first
-          try {
-            final downloadsDir = Directory('/storage/emulated/0/Download');
-            if (await downloadsDir.exists()) {
-              final path = '/storage/emulated/0/Download/netguard_report.pdf';
-              await File(path).writeAsBytes(bytes);
-              savedPath = path;
-            }
-          } catch (_) {}
+          // Save to app documents directory
+          final dir = await getApplicationDocumentsDirectory();
+          final path = '${dir.path}/netguard_report.pdf';
+          final file = File(path);
+          await file.writeAsBytes(bytes);
 
-          // Fallback to external storage
-          if (savedPath == null) {
-            try {
-              final extDir = await getExternalStorageDirectory();
-              if (extDir != null) {
-                final path = '${extDir.path}/netguard_report.pdf';
-                await File(path).writeAsBytes(bytes);
-                savedPath = path;
-              }
-            } catch (_) {}
-          }
-
-          // Final fallback to app documents
-          if (savedPath == null) {
-            final dir = await getApplicationDocumentsDirectory();
-            final path = '${dir.path}/netguard_report.pdf';
-            await File(path).writeAsBytes(bytes);
-            savedPath = path;
-          }
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('PDF saved to: $savedPath'),
-              backgroundColor: AppColors.green,
-              duration: const Duration(seconds: 6)));
+          // Open Android share sheet — user can save to Downloads, Drive etc
+          await Share.shareXFiles(
+            [XFile(path, mimeType: 'application/pdf')],
+            subject: 'NetGuard Threat Report',
+            text: 'NetGuard AI Threat Detection Report',
+          );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(result['error']?.toString() ?? 'Report failed'),
+              content: Text(
+                  result['error']?.toString() ?? 'Report failed'),
               backgroundColor: AppColors.red));
         }
       }
@@ -289,7 +267,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               fontSize: 12, fontWeight: FontWeight.bold,
                               letterSpacing: 1)),
                       SizedBox(height: 2),
-                      Text('Export threat analysis as PDF',
+                      Text('Export & share threat analysis as PDF',
                           style: TextStyle(color: AppColors.textMuted,
                               fontSize: 10)),
                     ])),
@@ -297,7 +275,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ? const SizedBox(width: 16, height: 16,
                             child: CircularProgressIndicator(
                                 strokeWidth: 2, color: AppColors.green))
-                        : const Icon(Icons.download_outlined,
+                        : const Icon(Icons.share_outlined,
                             color: AppColors.textMuted, size: 18),
                   ]),
                 ),
