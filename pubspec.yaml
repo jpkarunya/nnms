@@ -37,6 +37,9 @@ dependencies:
   # Push Notifications
   flutter_local_notifications: ^17.2.2
 
+  share_plus: ^10.1.2
+  open_file: ^3.3.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
